@@ -1,0 +1,83 @@
+group 'com.elastic.barretta'
+version '2.2'
+
+//gives us the shadowJar task to build an uberjar for AWS Lambda and docker stuff
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.0'
+        classpath 'com.bmuschko:gradle-docker-plugin:3.2.4'
+    }
+}
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'com.bmuschko.docker-remote-api'
+apply plugin: 'groovy'
+apply plugin: 'application'
+
+import com.bmuschko.gradle.docker.tasks.image.Dockerfile
+import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
+
+mainClassName = project.hasProperty("mainClass") ? project.getProperty("mainClass") : 'com.elastic.barretta.news_analysis.NewsCollector'
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    classifier = 'sources'
+}
+
+task moveDockerFiles(type: Copy) {
+    dependsOn build
+    from("$buildDir/libs")
+    from("$buildDir/resources/main") {
+        include 'Dockerfile.template'
+        include 'properties.groovy'
+    }
+    into "$buildDir/docker"
+}
+
+task createDockerfile(type: Dockerfile) {
+    dependsOn moveDockerFiles
+    destFile = project.file("$buildDir/docker/Dockerfile")
+    instructionsFromTemplate("src/main/resources/Dockerfile.template")
+    copyFile("news_collector-$version-all.jar", ".")
+    copyFile("properties.groovy", ".")
+    label([version: project.version.toString()])
+    defaultCommand("java", "-cp", "news_collector-$version-all.jar", "com.elastic.barretta.news_analysis.NewsCollector")
+}
+
+task buildDockerImage(type: DockerBuildImage) {
+    dependsOn createDockerfile
+    dockerFile = createDockerfile.destFile
+    inputDir = createDockerfile.destFile.parentFile
+    tag = "news_collector:$project.version"
+}
+
+tasks.withType(GroovyCompile) {
+    groovyOptions.optimizationOptions.indy = true
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    compile(
+        'com.elastic.barretta:clients-rosette:0.3',
+        'com.syncthemall:boilerpipe:1.2.2',
+        'commons-cli:commons-cli:1.2',
+        'org.apache.commons:commons-compress:1.16.1',
+        'org.elasticsearch.client:elasticsearch-rest-high-level-client:7.0.0',
+        'org.codehaus.groovy:groovy-all:2.5.6',
+        'com.github.groovy-wslite:groovy-wslite:1.1.3',
+        'org.codehaus.gpars:gpars:1.2.1',
+        'ch.qos.logback:logback-classic:1.2.3',
+        'com.amazonaws:aws-lambda-java-core:1.1.0'
+    )
+    testCompile 'org.spockframework:spock-core:1.3-groovy-2.5'
+}
+
+processResources {
+    expand(version: version)
+}

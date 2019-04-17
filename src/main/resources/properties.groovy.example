@@ -1,0 +1,60 @@
+//indexPrefix = "news"
+es {
+    url = "http://localhost:9200"
+//    user = "elastic"
+//    pass = "changeme"
+}
+//uncomment to enable fetching from News API - also, get a key
+//newsApi {
+//    key = ""
+//    sources = [
+//        "al-jazeera-english",
+//        "axios",
+//        "ars-technica",
+//        "associated-press",
+//        "bbc-news",
+//        "bbc-sport",
+//        "bleacher-report"
+//        "bloomberg",
+//        "business-insider",
+//        "buzzfeed",
+//        "cnbc",
+//        "cnn",
+//        "engadget",
+//        "entertainment-weekly",
+//        "espn",
+//        "financial-times",
+//        "fox-sports",
+//        "google-news",
+//        "hacker-news",
+//        "mtv-news",
+//        "national-geographic",
+//        "new-scientist",
+//        "newsweek",
+//        "new-york-magazine",
+//        "next-big-future"
+//        "reuters",
+//        "techcrunch",
+//        "the-economist",
+//        "the-guardian-uk",
+//        "the-hindu",
+//        "the-irish-times"
+//        "the-new-york-times",
+//        "the-times-of-india",
+//        "the-verge",
+//       "the-wall-street-journal",
+//        "the-washington-post",
+//        "time",
+//        "usa-today",
+//        "vice-news"
+//    ]
+//}
+enrichment {
+
+    /* uncomment to enable Rosette API entity/location extraction
+    rosetteApi {
+        url = "http://localhost:8181/rest/v1"
+        key = "<key>"
+    }
+    */
+}
