@@ -9,6 +9,8 @@ import groovy.time.TimeCategory
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsPool
 
+import java.util.concurrent.ConcurrentHashMap
+
 /**
  * Pull docs from AP and push into ES using supplied client
  */
@@ -17,7 +19,7 @@ class APScraper {
 
     static def scrape(ESClient client) {
 
-        def results = [:]
+        def results = [:] as ConcurrentHashMap
         final def AP_URL = "https://afs-prod.appspot.com/api/v2/feed/tag?tags="
 
         def enricher = new Enricher()
@@ -42,8 +44,7 @@ class APScraper {
             //fetch article for each url found
             def posted = 0
             GParsPool.withPool(PropertyManager.instance.properties.maxThreads as int) {
-                articleUrls.collectParallel { new JsonSlurper().parse(it.toURL()) }.each { article ->
-//                def article = new JsonSlurper().parse(url.toURL())
+                articleUrls.collectParallel { new JsonSlurper().parse(it.toURL()) }.eachParallel { article ->
                     log.trace("starting article [${article.shortId}]")
                     def timeStart = new Date()
 
@@ -74,7 +75,8 @@ class APScraper {
                     }
 
                     def timeStop = new Date()
-                    log.trace("finished article [${article.shortId}] in [${TimeCategory.minus(timeStop, timeStart)}]")
+                    log.trace("finished article [${article.shortId}]")
+                    log.debug("TIMER: processed article [${article.shortId} in [${TimeCategory.minus(timeStop, timeStart)}]")
                 }
                 log.trace("...posted [$posted]")
                 results << [(tag): posted]

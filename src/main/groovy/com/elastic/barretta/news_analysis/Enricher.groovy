@@ -3,7 +3,6 @@ package com.elastic.barretta.news_analysis
 import com.elastic.barretta.analytics.rosette.RosetteApiClient
 import com.elastic.barretta.clients.ESClient
 import groovy.json.JsonSlurper
-import groovy.time.TimeCategory
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsPool
 
@@ -33,10 +32,7 @@ class Enricher {
 
     def enrich(Map doc) {
         if (rosette) {
-            def start = new Date()
             def entities = rosette.getEntities(doc.text)
-            def end = new Date()
-            log.trace("Rosette response time [${TimeCategory.minus(end, start)}")
             doc = addEntities(doc, entities)
             doc = addSentiment(doc)
         }
@@ -62,7 +58,7 @@ class Enricher {
             doc.entityResolvedLocations = [] as ConcurrentLinkedQueue
             doc.locationObjects = [] as ConcurrentLinkedQueue
 
-            GParsPool.withPool(PropertyManager.instance.properties.maxThreads) {
+            GParsPool.withPool(PropertyManager.instance.properties.maxThreads as int) {
                 entities.eachParallel {
                     doc.entityNames << it.normalized
                     doc.entityObjects << [id: it.entityId, name: it.normalized, type: it.type, count: it.count]

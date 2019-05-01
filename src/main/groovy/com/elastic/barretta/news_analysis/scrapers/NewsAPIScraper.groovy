@@ -42,7 +42,7 @@ class NewsAPIScraper {
         def enricher = new Enricher()
         def results = [:] as ConcurrentHashMap
 
-        GParsPool.withPool(PropertyManager.instance.properties.maxThreads) {
+        GParsPool.withPool(PropertyManager.instance.properties.maxThreads as int) {
             config.sources.eachParallel {
                 log.info("fetching source [$it]")
 

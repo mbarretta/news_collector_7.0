@@ -4,7 +4,7 @@ appender("FILE", RollingFileAppender) {
     file = "log.log"
     rollingPolicy(TimeBasedRollingPolicy) {
         fileNamePattern = "log.log.%d{yyyy-MM-dd}"
-        maxHistory = 10
+        maxHistory = 5
         totalSizeCap = "1GB"
     }
     encoder(PatternLayoutEncoder) {
