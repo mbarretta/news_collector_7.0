@@ -9,7 +9,7 @@ class Main {
         cli.momentum("generate momentum metrics")
         cli.help("print this message")
         def options = cli.parse(args)
-        if (!options || options.help) {
+        if (args.length == 0 || !options || options.help) {
             cli.usage()
             System.exit(0)
         } else {
