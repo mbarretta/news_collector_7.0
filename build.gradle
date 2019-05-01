@@ -68,7 +68,7 @@ repositories {
 
 dependencies {
     compile(
-        'com.github.mbarretta:clients-rosette:0.3',
+        'com.github.mbarretta:clients-rosette:e69278e',
         'com.github.mbarretta:es-client:35a24f1',
         'com.syncthemall:boilerpipe:1.2.2',
         'commons-cli:commons-cli:1.2',
