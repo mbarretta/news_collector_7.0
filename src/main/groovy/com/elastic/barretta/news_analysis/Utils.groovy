@@ -1,16 +1,16 @@
 package com.elastic.barretta.news_analysis
 
+import com.elastic.barretta.clients.ESClient
+import groovy.time.TimeCategory
 import groovy.util.logging.Slf4j
 
 @Slf4j
 class Utils {
-    // todo: this is bad because it doesn't use the app config's sentiment_index value - might need to create a static singleton for
-    // the config so it can be reached everywhere
     static def writeEntitySentimentsToOwnIndex(String id, Map doc, ESClient client) {
         def date = doc.date
         doc.entityObjects?.each {
             if (["PERSON", "ORGANIZATION", "LOCATION"].contains(it.type) && it.sentimentLabel) {
-                client.postDoc(
+                client.index(
                     [
                         date      : date,
                         name      : it.name,
@@ -21,7 +21,7 @@ class Utils {
                         articleId : id,
                         source    : it.source
                     ],
-                    "news_entity_sentiment"
+                    PropertyManager.instance.properties.indices.sentiment
                 )
             }
         }

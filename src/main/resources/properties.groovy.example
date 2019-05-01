@@ -4,6 +4,11 @@ es {
 //    user = "elastic"
 //    pass = "changeme"
 }
+indices {
+    news = "news"
+    momentum = "news_momentum"
+    sentiment = "news_sentiment"
+}
 //uncomment to enable fetching from News API - also, get a key
 //newsApi {
 //    key = ""
@@ -58,3 +63,4 @@ enrichment {
     }
     */
 }
+maxThreads=2

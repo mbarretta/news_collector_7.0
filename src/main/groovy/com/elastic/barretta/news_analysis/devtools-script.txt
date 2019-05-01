@@ -1,3 +1,4 @@
+PUT _template/news
 {
   "index_patterns": [
     "news-*"
@@ -144,3 +145,110 @@
       }
     }
   }
+PUT /news-000001
+{
+  "aliases": {
+    "news": { "is_write_index": true}
+  }
+}
+PUT _template/news_momentum
+{
+  "index_patterns": [
+    "news_momentum-*"
+  ],
+  "settings": {
+    "index": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1,
+      "lifecycle.name": "20gb-rollover",
+      "lifecycle.rollover_alias": "news_momentum"
+    }
+  },
+  "mappings": {
+      "properties": {
+        "name": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "score": {
+          "type": "half_float"
+        },
+        "date": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd'T'HH:mm:ssZ||yyyy-MM-dd'T'HH:mm:ss.SSSZ||yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd"
+        }
+      }
+    }
+}
+PUT /news_momentum-000001
+{
+  "aliases": {
+    "news_momentum": { "is_write_index": true}
+  }
+}
+PUT _template/news_sentiment
+{
+  "index_patterns": [
+    "news_sentiment-*"
+  ],
+  "settings": {
+    "index": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1,
+      "lifecycle.name": "20gb-rollover",
+      "lifecycle.rollover_alias": "news_sentiment"
+    }
+  },
+  "mappings": {
+    "properties": {
+      "articleId": {
+        "type": "keyword"
+      },
+      "confidence": {
+        "type": "float"
+      },
+      "date": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd'T'HH:mm:ssZ||yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+      },
+      "name": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "negative": {
+        "type": "long"
+      },
+      "neutral": {
+        "type": "long"
+      },
+      "positive": {
+        "type": "long"
+      },
+      "sentiment": {
+        "type": "keyword"
+      },
+      "type": {
+        "type": "keyword"
+      },
+      "value": {
+        "type": "integer"
+      }
+    }
+  }
+}
+PUT /news_sentiment-000001
+{
+  "aliases": {
+    "news_sentiment": { "is_write_index": true}
+  }
+}

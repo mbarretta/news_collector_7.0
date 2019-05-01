@@ -1,11 +1,15 @@
 package com.elastic.barretta.news_analysis.scrapers
 
-import com.elastic.barretta.news_analysis.ESClient
+import com.elastic.barretta.clients.ESClient
 import com.elastic.barretta.news_analysis.Enricher
+import com.elastic.barretta.news_analysis.PropertyManager
 import com.elastic.barretta.news_analysis.Utils
 import de.l3s.boilerpipe.extractors.ArticleExtractor
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
+import groovyx.gpars.GParsPool
+
+import java.util.concurrent.ConcurrentHashMap
 
 @Slf4j
 class NewsAPIScraper {
@@ -21,7 +25,7 @@ class NewsAPIScraper {
             return "Config{" +
                 "key='" + key + '\'' +
                 ", sources=" + sources +
-                '}';
+                '}'
         }
     }
 
@@ -36,57 +40,61 @@ class NewsAPIScraper {
         }
 
         def enricher = new Enricher()
-        def results = [:]
+        def results = [:] as ConcurrentHashMap
 
-        config.sources.each {
-            log.info("fetching source [$it]")
+        GParsPool.withPool(PropertyManager.instance.properties.maxThreads) {
+            config.sources.eachParallel {
+                log.info("fetching source [$it]")
 
-            def posted = 0
-            def url = new URL(API_URL + "?apiKey=${config.key}&source=$it")
+                def posted = 0
+                def url = new URL(API_URL + "?apiKey=${config.key}&source=$it")
 
-            try {
+                try {
 
-                //loop through each article we found...
-                new JsonSlurper().parse(url).articles.each { article ->
-                    def doc = [
-                        title : article.title,
-                        url   : article.url,
-                        byline: article.author,
-                        date  : article.publishedAt,
-                        source: it,
-                        text  : ArticleExtractor.INSTANCE.getText(article.url.toURL())
-                    ]
+                    //loop through each article we found...
+                    new JsonSlurper().parse(url).articles.each { article ->
+                        def doc = [
+                            title : article.title,
+                            url   : article.url,
+                            byline: article.author,
+                            date  : article.publishedAt,
+                            source: it,
+                            text  : ArticleExtractor.INSTANCE.getText(article.url.toURL())
+                        ]
 
-                    //if it has a body...
-                    if (doc.text && !doc.text.trim().isEmpty()) {
+                        //if it has a body...
+                        if (doc.text && !doc.text.trim().isEmpty()) {
 
-                        //if it's new, write it
-                        if (!client.docExists("url.keyword", doc.url)) {
-                            doc = enricher.enrich(doc)
-                            def newId = client.postDoc(doc)
+                            //if it's new, write it
+                            if (!client.existsByMatch("url.keyword", doc.url)) {
+                                doc = enricher.enrich(doc)
+                                def newId = client.index(doc)
 
-                            Utils.writeEntitySentimentsToOwnIndex(newId, doc, client)
-                            posted++
-                        }
-
-                        //else, decide if we should update it or ignore it
-                        else {
-                            log.trace("doc [$article.url] already exists in index")
-                            def existingDoc = client.getDocByUniqueField("url.keyword", doc.url)
-
-                            //if the doc has a new published date, we'll assume content was changed or added: we'll be doing an update
-                            if (existingDoc._source.date != doc.date){
-                                log.trace("...updating due to newer timestamp [$doc.date vs [$existingDoc._source.date]")
-                                client.updateDoc(existingDoc._id, enricher.enrich(doc))
+                                Utils.writeEntitySentimentsToOwnIndex(newId, doc, client)
                                 posted++
+                            }
+
+                            //else, decide if we should update it or ignore it
+                            else {
+                                log.trace("doc [$article.url] already exists in index")
+                                def existingDoc = client.termQuery("url.keyword", doc.url).hits.hits[0].sourceAsMap
+
+                                //if the doc has a new published date, we'll assume content was changed or added: we'll be doing an update
+                                if (existingDoc._source.date != doc.date) {
+                                    log.trace("...updating due to newer timestamp [${doc.date} vs [${existingDoc._source.date}]")
+                                    doc = enricher.enrich(doc)
+                                    doc._id = existingDoc._id
+                                    client.update(doc)
+                                    posted++
+                                }
                             }
                         }
                     }
+                    log.trace("...posted [$posted]")
+                    results << [(it): posted]
+                } catch (e) {
+                    log.error("error fetching or posting article [$e.cause] [$e.message]")
                 }
-                log.trace("...posted [$posted]")
-                results << [(it): posted]
-            } catch (e) {
-                log.error("error fetching or posting article [$e.cause] [$e.message]")
             }
         }
         log.info("results:\n$results")

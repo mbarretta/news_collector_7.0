@@ -1,9 +1,11 @@
 package com.elastic.barretta.news_analysis.scrapers
 
-import com.elastic.barretta.news_analysis.ESClient
+import com.elastic.barretta.clients.ESClient
 import com.elastic.barretta.news_analysis.Enricher
+import com.elastic.barretta.news_analysis.PropertyManager
 import com.elastic.barretta.news_analysis.Utils
 import groovy.json.JsonSlurper
+import groovy.time.TimeCategory
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsPool
 
@@ -39,9 +41,11 @@ class APScraper {
 
             //fetch article for each url found
             def posted = 0
-            GParsPool.withPool {
+            GParsPool.withPool(PropertyManager.instance.properties.maxThreads as int) {
                 articleUrls.collectParallel { new JsonSlurper().parse(it.toURL()) }.each { article ->
 //                def article = new JsonSlurper().parse(url.toURL())
+                    log.trace("starting article [${article.shortId}]")
+                    def timeStart = new Date()
 
                     //quality-check - not all "articles" are actually articles
                     if (article && article.storyHTML && !article.shortId.contains(":")) {
@@ -58,16 +62,19 @@ class APScraper {
 
                         //filter empties and duplicates
                         if (doc.text && !doc.text.trim().isEmpty() &&
-                            !client.docExists("url.keyword", article.localLinkUrl) && !client.docExists("shortId", article.shortId)) {
-                            def newId = client.postDoc(enricher.enrich(doc))
+                            !client.existsByMatch("url.keyword", article.localLinkUrl) && !client.existsByMatch("shortId", article.shortId)) {
+                            def newId = client.index(enricher.enrich(doc))
                             Utils.writeEntitySentimentsToOwnIndex(newId, doc, client)
                             posted++
                         } else {
                             log.trace("doc [$article.shortId] already exists in index or has no body text - skipping")
                         }
                     } else {
-                        log.trace("empty article found [$url]")
+                        log.trace("empty article found [$article]")
                     }
+
+                    def timeStop = new Date()
+                    log.trace("finished article [${article.shortId}] in [${TimeCategory.minus(timeStop, timeStart)}]")
                 }
                 log.trace("...posted [$posted]")
                 results << [(tag): posted]

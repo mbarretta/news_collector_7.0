@@ -1,7 +1,9 @@
 package com.elastic.barretta.news_analysis
 
 import com.elastic.barretta.analytics.rosette.RosetteApiClient
+import com.elastic.barretta.clients.ESClient
 import groovy.json.JsonSlurper
+import groovy.time.TimeCategory
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsPool
 
@@ -12,8 +14,7 @@ class Enricher {
     RosetteApiClient rosette
 
     Enricher() {
-        def config = new ConfigSlurper().parse(this.class.classLoader.getResource("properties.groovy"))
-
+        def config = PropertyManager.instance.properties
         if (config.enrichment) {
             if (config.enrichment.rosetteApi) {
                 try {
@@ -32,7 +33,10 @@ class Enricher {
 
     def enrich(Map doc) {
         if (rosette) {
+            def start = new Date()
             def entities = rosette.getEntities(doc.text)
+            def end = new Date()
+            log.trace("Rosette response time [${TimeCategory.minus(end, start)}")
             doc = addEntities(doc, entities)
             doc = addSentiment(doc)
         }
@@ -58,7 +62,7 @@ class Enricher {
             doc.entityResolvedLocations = [] as ConcurrentLinkedQueue
             doc.locationObjects = [] as ConcurrentLinkedQueue
 
-            GParsPool.withPool {
+            GParsPool.withPool(PropertyManager.instance.properties.maxThreads) {
                 entities.eachParallel {
                     doc.entityNames << it.normalized
                     doc.entityObjects << [id: it.entityId, name: it.normalized, type: it.type, count: it.count]
@@ -169,12 +173,10 @@ class Enricher {
                 ]
             ]
         ]
-        def response = client.post(path: "${NewsCollector.DEFAULT_ES_INDEX_PREFIX}/_search?size=0") {
-            json body
-        }
+        def response = client.rawRequest("GET", "/${PropertyManager.instance.properties.indices.news}/_search", body)
 
         def data = [:].withDefault { 0 as double }
-        def buckets = response.json.aggregations.daily.buckets
+        def buckets = response.aggregations.daily.buckets
 
         // trying to do log(avg())*[1]/[0] + [2]/[1]) * min( (1/5) * numSources, 2)
         // intuition is to look at the "average" change in the mentions for this entity over the past three days,
