@@ -23,7 +23,7 @@ apply plugin: 'application'
 import com.bmuschko.gradle.docker.tasks.image.Dockerfile
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 
-mainClassName = project.hasProperty("mainClass") ? project.getProperty("mainClass") : 'com.elastic.barretta.news_analysis.NewsCollector'
+mainClassName = project.hasProperty("mainClass") ? project.getProperty("mainClass") : 'com.elastic.barretta.news_analysis.Main'
 
 task sourcesJar(type: Jar) {
     from sourceSets.main.allSource
