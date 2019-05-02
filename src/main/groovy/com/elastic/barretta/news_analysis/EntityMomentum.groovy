@@ -3,6 +3,8 @@ package com.elastic.barretta.news_analysis
 import com.elastic.barretta.clients.ESClient
 import groovy.util.logging.Slf4j
 
+import java.time.LocalDate
+
 @Slf4j
 class EntityMomentum {
 
@@ -10,7 +12,7 @@ class EntityMomentum {
         run()
     }
 
-    static def run(date = new Date().format("yyyy-MM-dd")) {
+    static def run(date = LocalDate.now().format("yyyy-MM-dd")) {
         def config = PropertyManager.instance.properties
         def esClient = new ESClient(config.es as ESClient.Config)
         esClient.config.index = config.indices.momentum
@@ -19,9 +21,9 @@ class EntityMomentum {
         log.info("scoring momentum for [$date]")
 
         //prevent duplicates by looking for data from "today"
-        if (!esClient.exists("date", date)) {
+        if (!esClient.existsByMatch("date", date)) {
 
-            def results = Enricher.calculateMomentum(esClient, Date.parse("yyyy-MM-dd", date))
+            def results = Enricher.calculateMomentum(esClient, LocalDate.parse(date, "yyyy-MM-dd"))
             if (!results.isEmpty()) {
                 def postList = results.inject([]) { l, k, v ->
                     l << [name: k, score: v, date: date]

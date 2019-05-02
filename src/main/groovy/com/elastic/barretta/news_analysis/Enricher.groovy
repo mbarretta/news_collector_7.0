@@ -6,6 +6,7 @@ import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsPool
 
+import java.time.LocalDate
 import java.util.concurrent.ConcurrentLinkedQueue
 
 @Slf4j
@@ -130,7 +131,7 @@ class Enricher {
         return doc
     }
 
-    static def calculateMomentum(ESClient client, Date date = new Date()) {
+    static def calculateMomentum(ESClient client, LocalDate date = new LocalDate()) {
         def dateString = date.format("yyyy-MM-dd")
 
         def body = [
