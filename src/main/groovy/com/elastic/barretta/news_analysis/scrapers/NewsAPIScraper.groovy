@@ -6,10 +6,12 @@ import com.elastic.barretta.news_analysis.PropertyManager
 import com.elastic.barretta.news_analysis.Utils
 import de.l3s.boilerpipe.extractors.ArticleExtractor
 import groovy.json.JsonSlurper
+import groovy.time.TimeCategory
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsPool
 
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 @Slf4j
 class NewsAPIScraper {
@@ -43,57 +45,67 @@ class NewsAPIScraper {
         def results = [:] as ConcurrentHashMap
 
         GParsPool.withPool(PropertyManager.instance.properties.maxThreads as int) {
-            config.sources.eachParallel {
-                log.info("fetching source [$it]")
+            config.sources.each { source ->
+                log.info("fetching source [$source]")
 
-                def posted = 0
-                def url = new URL(API_URL + "?apiKey=${config.key}&source=$it")
+                def posted = new AtomicInteger(0)
+                def url = new URL(API_URL + "?apiKey=${config.key}&source=$source")
 
                 try {
-
                     //loop through each article we found...
-                    new JsonSlurper().parse(url).articles.each { article ->
-                        def doc = [
-                            title : article.title,
-                            url   : article.url,
-                            byline: article.author,
-                            date  : article.publishedAt,
-                            source: it,
-                            text  : ArticleExtractor.INSTANCE.getText(article.url.toURL())
-                        ]
+                    def articles = new JsonSlurper().parse(url).articles
+                    log.info("found [${articles.size()}] articles")
+                    articles.eachParallel { article ->
+                        log.trace("starting article [${article.url}]")
+                        def timeStart = new Date()
+                        try {
+                            def doc = [
+                                title : article.title,
+                                url   : article.url,
+                                byline: article.author,
+                                date  : article.publishedAt,
+                                source: source,
+                                text  : ArticleExtractor.INSTANCE.getText(article.url.toURL())
+                            ]
 
-                        //if it has a body...
-                        if (doc.text && !doc.text.trim().isEmpty()) {
+                            //if it has a body...
+                            if (doc.text && !doc.text.trim().isEmpty()) {
 
-                            //if it's new, write it
-                            if (!client.existsByMatch("url.keyword", doc.url)) {
-                                doc = enricher.enrich(doc)
-                                def newId = client.index(doc)
-
-                                Utils.writeEntitySentimentsToOwnIndex(newId, doc, client)
-                                posted++
-                            }
-
-                            //else, decide if we should update it or ignore it
-                            else {
-                                log.trace("doc [$article.url] already exists in index")
-                                def existingDoc = client.termQuery("url.keyword", doc.url).hits.hits[0].sourceAsMap
-
-                                //if the doc has a new published date, we'll assume content was changed or added: we'll be doing an update
-                                if (existingDoc._source.date != doc.date) {
-                                    log.trace("...updating due to newer timestamp [${doc.date} vs [${existingDoc._source.date}]")
+                                //if it's new, write it
+                                if (!client.existsByMatch("url.keyword", doc.url)) {
                                     doc = enricher.enrich(doc)
-                                    doc._id = existingDoc._id
-                                    client.update(doc)
+                                    def newId = client.index(doc)
+
+                                    Utils.writeEntitySentimentsToOwnIndex(newId, doc, client)
                                     posted++
                                 }
+
+                                //else, decide if we should update it or ignore it
+                                else {
+                                    log.trace("doc [$article.url] already exists in index")
+                                    def existingDoc = client.termQuery("url.keyword", doc.url).hits.hits[0].sourceAsMap
+
+                                    //if the doc has a new published date, we'll assume content was changed or added: we'll be doing an update
+                                    if (existingDoc._source.date != doc.date) {
+                                        log.trace("...updating due to newer timestamp [${doc.date} vs [${existingDoc._source.date}]")
+                                        doc = enricher.enrich(doc)
+                                        doc._id = existingDoc._id
+                                        client.update(doc)
+                                        posted++
+                                    }
+                                }
                             }
+                        } catch (e) {
+                            log.error("error fetching or posting article [$e.cause] [$e.message]")
                         }
+                        def timeStop = new Date()
+                        log.trace("finished article [${article.url}]")
+                        log.debug("TIMER: processed article [${article.url} in [${TimeCategory.minus(timeStop, timeStart)}]")
                     }
                     log.trace("...posted [$posted]")
-                    results << [(it): posted]
+                    results << [(source): posted]
                 } catch (e) {
-                    log.error("error fetching or posting article [$e.cause] [$e.message]")
+                    log.error("unable to fetch articles from [$source] [$e.cause] [$e.message]")
                 }
             }
         }
