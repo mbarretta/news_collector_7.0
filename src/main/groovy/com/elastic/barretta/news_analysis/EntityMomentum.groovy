@@ -17,7 +17,6 @@ class EntityMomentum {
         def esClient = new ESClient(config.es as ESClient.Config)
         esClient.config.index = config.indices.momentum
 
-        def insertedRecords = 0
         log.info("scoring momentum for [$date]")
 
         //prevent duplicates by looking for data from "today"
@@ -28,13 +27,12 @@ class EntityMomentum {
                 def postList = results.inject([]) { l, k, v ->
                     l << [name: k, score: v, date: date]
                 }
-                insertedRecords = esClient.bulk([(ESClient.BulkOps.INSERT):postList])
+                esClient.bulk([(ESClient.BulkOps.INSERT):postList])
             } else {
                 log.info("no records found, so no momentum records generated")
             }
         } else {
             log.info("documents with date found - skipping")
         }
-        return insertedRecords
     }
 }
