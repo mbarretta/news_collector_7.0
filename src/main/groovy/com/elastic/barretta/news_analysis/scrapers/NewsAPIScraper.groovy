@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger
 @Slf4j
 class NewsAPIScraper {
 
-    final static String API_URL = "https://newsapi.org/v1/articles"
+    final static String API_URL = "https://newsapi.org/v2/top-headlines"
 
     static class Config {
         String key
@@ -50,7 +50,7 @@ class NewsAPIScraper {
                 log.info("fetching source [$source]")
 
                 def posted = new AtomicInteger(0)
-                def url = new URL(API_URL + "?apiKey=${config.key}&source=$source")
+                def url = new URL(API_URL + "?apiKey=${config.key}&source=$source&pageSize=50")
 
                 try {
                     //loop through each article we found...
@@ -65,7 +65,7 @@ class NewsAPIScraper {
                                 url   : article.url,
                                 byline: article.author,
                                 date  : article.publishedAt,
-                                source: source,
+                                source: source.id,
                                 text  : ArticleExtractor.INSTANCE.getText(new InputSource(article.url.toURL().openStream()))
                             ]
 
