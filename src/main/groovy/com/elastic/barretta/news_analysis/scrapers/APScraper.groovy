@@ -83,7 +83,7 @@ class APScraper {
                     results << [(tag): posted]
                 }
             } catch (e) {
-                log.error(e)
+                log.error("error", e)
             }
         }
 

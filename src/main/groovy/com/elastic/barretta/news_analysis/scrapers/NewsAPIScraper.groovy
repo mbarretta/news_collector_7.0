@@ -9,6 +9,7 @@ import groovy.json.JsonSlurper
 import groovy.time.TimeCategory
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsPool
+import org.xml.sax.InputSource
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -65,7 +66,7 @@ class NewsAPIScraper {
                                 byline: article.author,
                                 date  : article.publishedAt,
                                 source: source,
-                                text  : ArticleExtractor.INSTANCE.getText(article.url.toURL())
+                                text  : ArticleExtractor.INSTANCE.getText(new InputSource(article.url.toURL().openStream()))
                             ]
 
                             //if it has a body...
@@ -83,13 +84,14 @@ class NewsAPIScraper {
                                 //else, decide if we should update it or ignore it
                                 else {
                                     log.trace("doc [$article.url] already exists in index")
-                                    def existingDoc = client.termQuery("url.keyword", doc.url).hits.hits[0].sourceAsMap
+                                    def existingDoc = client.termQuery("url.keyword", doc.url).hits.hits[0]
+                                    def existingDocSource = existingDoc.sourceAsMap
 
                                     //if the doc has a new published date, we'll assume content was changed or added: we'll be doing an update
-                                    if (existingDoc._source.date != doc.date) {
-                                        log.trace("...updating due to newer timestamp [${doc.date} vs [${existingDoc._source.date}]")
+                                    if (existingDocSource.date != doc.date) {
+                                        log.trace("...updating due to newer timestamp [${doc.date} vs [${existingDocSource.date}]")
                                         doc = enricher.enrich(doc)
-                                        doc._id = existingDoc._id
+                                        doc._id = existingDoc.id
                                         client.update(doc)
                                         posted++
                                     }
