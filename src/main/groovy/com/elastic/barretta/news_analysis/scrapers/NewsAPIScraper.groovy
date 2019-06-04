@@ -50,7 +50,7 @@ class NewsAPIScraper {
                 log.info("fetching source [$source]")
 
                 def posted = new AtomicInteger(0)
-                def url = new URL(API_URL + "?apiKey=${config.key}&source=$source&pageSize=50")
+                def url = new URL(API_URL + "?apiKey=${config.key}&sources=$source&pageSize=50")
 
                 try {
                     //loop through each article we found...
