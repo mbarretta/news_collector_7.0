@@ -65,7 +65,7 @@ class NewsAPIScraper {
                                 url   : article.url,
                                 byline: article.author,
                                 date  : article.publishedAt,
-                                source: source.id,
+                                source: source,
                                 text  : ArticleExtractor.INSTANCE.getText(new InputSource(article.url.toURL().openStream()))
                             ]
 
