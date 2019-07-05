@@ -5,6 +5,13 @@ import com.elastic.barretta.clients.ESClient
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsPool
+import org.elasticsearch.index.query.QueryBuilders
+import org.elasticsearch.index.query.RangeQueryBuilder
+import org.elasticsearch.search.aggregations.AggregationBuilders
+import org.elasticsearch.search.aggregations.bucket.composite.DateHistogramValuesSourceBuilder
+import org.elasticsearch.search.aggregations.bucket.composite.ParsedComposite
+import org.elasticsearch.search.aggregations.bucket.composite.TermsValuesSourceBuilder
+import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramInterval
 
 import java.time.LocalDate
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -134,78 +141,44 @@ class Enricher {
     static def calculateMomentum(ESClient client, LocalDate date = new LocalDate()) {
         def dateString = date.format("yyyy-MM-dd")
 
-        def body = [
-            query: [
-                range: [
-                    date: [
-                        gte: "$dateString 11:11:11||-3d/d",
-                        lte: "$dateString 11:11:11||-1d/d"
-                    ]
-                ]
-            ],
-            aggs : [
-                daily: [
-                    date_histogram: [
-                        field   : "date",
-                        interval: "day"
-                    ],
-                    aggs          : [
-                        entities: [
-                            terms: [
-                                field: "entityPeople.keyword",
-                                size : 10000
-
-                            ],
-                            aggs : [
-                                sources: [
-                                    terms: [
-                                        field        : "source",
-                                        size         : 50,
-                                        min_doc_count: 1
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
-            ]
+        //build the aggregation request to give us one bucket per entity with date-histo child buckets for each of the last 3 days,
+        //each with their own terms child buckets for each source they're mentioned in on that given day
+        //entities->days->sources
+        def query = QueryBuilders.constantScoreQuery(
+            new RangeQueryBuilder("date").gte("$dateString 00:00:00||-3d/d".toString()).lte("$dateString 23:59:59||-2d/d".toString())
+        )
+        def sources = [
+            new TermsValuesSourceBuilder("entities").field("entityPeople.keyword")
         ]
-        def response = client.rawRequest("GET", "/${PropertyManager.instance.properties.indices.news}/_search", body)
+        def compositeAgg = AggregationBuilders.composite("composite", sources).size(100)
+        def dateAgg = AggregationBuilders.dateHistogram("days").calendarInterval(new DateHistogramInterval("day")).field("date").minDocCount(1)
+        def sourceAgg  = AggregationBuilders.terms("sources").field("source").minDocCount(1)
+        dateAgg.subAggregation(sourceAgg)
+        compositeAgg.subAggregation(dateAgg)
 
-        def data = [:].withDefault { 0 as double }
-        def buckets = response.aggregations.daily.buckets
+        def buckets = client.compositeAgg(compositeAgg, query, PropertyManager.instance.properties.indices.news)
 
-        // trying to do log(avg())*[1]/[0] + [2]/[1]) * min( (1/5) * numSources, 2)
+        // trying to do log(avg())*([1]/[0] + [2]/[1]) * min( (1/5) * numSources, 2)
         // intuition is to look at the "average" change in the mentions for this entity over the past three days,
         // adjust it on a log scale to boost score of those with a lot of mentions, and then increase that score to
         // reward those (up to 2x) who show up in more than one source - reward maxes out after 10 sources
-        buckets.eachWithIndex { bucket, i ->
-
-            //look at all three buckets and do the things
-            bucket.entities.buckets.each { entity ->
-
-                if (i < 2) {
-                    def match = buckets[i + 1].entities.buckets.find { it.key == entity.key }
-                    def diff = (match) ? match.doc_count / entity.doc_count : entity.doc_count
-                    data[entity.key] += diff
+        def data = [:].withDefault { 0 as double }
+        buckets.each { entity ->
+            def changeCoef = 0
+            def days = entity.aggregations.get("days").buckets
+            if (days.size() > 1) {
+                def previousCount = days.head().docCount
+                days.tail().each {
+                    changeCoef += it.docCount / previousCount
+                    previousCount = it.docCount
                 }
-
-                // can't reach ahead to the next bucket anymore...
-                else {
-
-                    // if we're in the 3rd bucket and haven't seen this guy yet, throw him in
-                    // otherwise he's already been considered during last loop
-                    if (!data.containsKey(entity.key)) {
-                        data[entity.key] += entity.doc_count
-                    }
-
-                    //finish our scoring considering data from all three buckets
-                    def parent = buckets.entities.buckets.flatten().findAll { it.key == entity.key }
-                    def sourceWeight = Math.min(parent.sources.buckets.flatten().size() / 5, 2 as double)
-                    def mentionWeight = Math.log(parent.collect { it.doc_count }.sum() / 3)
-                    data[entity.key] = sourceWeight * mentionWeight * data[entity.key] as double
-                }
+            } else {
+               changeCoef = entity.docCount
             }
+
+            def sourceWeight = Math.min(days.collect { it.aggregations.get("sources").buckets}.flatten().size() / 5, 2 as double)
+            def mentionWeight = Math.log(entity.docCount / days.size())
+            data[entity.key.entities] = sourceWeight * mentionWeight * changeCoef
         }
         return data
     }

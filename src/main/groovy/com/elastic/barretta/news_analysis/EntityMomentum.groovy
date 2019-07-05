@@ -10,6 +10,7 @@ class EntityMomentum {
 
     static void main(String[] args) {
         run()
+        System.exit(0)
     }
 
     static def run(date = LocalDate.now().format("yyyy-MM-dd")) {
