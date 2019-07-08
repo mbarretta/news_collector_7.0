@@ -178,7 +178,7 @@ class Enricher {
 
             def sourceWeight = Math.min(days.collect { it.aggregations.get("sources").buckets}.flatten().size() / 5, 2 as double)
             def mentionWeight = Math.log(entity.docCount / days.size())
-            data[entity.key.entities] = sourceWeight * mentionWeight * changeCoef
+            data[entity.key.entities] = (sourceWeight * mentionWeight * changeCoef).round(1)
         }
         return data
     }
