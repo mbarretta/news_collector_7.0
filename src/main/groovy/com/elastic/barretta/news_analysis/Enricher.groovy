@@ -8,8 +8,6 @@ import groovyx.gpars.GParsPool
 import org.elasticsearch.index.query.QueryBuilders
 import org.elasticsearch.index.query.RangeQueryBuilder
 import org.elasticsearch.search.aggregations.AggregationBuilders
-import org.elasticsearch.search.aggregations.bucket.composite.DateHistogramValuesSourceBuilder
-import org.elasticsearch.search.aggregations.bucket.composite.ParsedComposite
 import org.elasticsearch.search.aggregations.bucket.composite.TermsValuesSourceBuilder
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramInterval
 
@@ -105,11 +103,9 @@ class Enricher {
         doc.entityLocations << entity.normalized
         def location = new JsonSlurper().parse("https://www.wikidata.org/w/api.php?format=json&action=wbgetentities&ids=${entity.entityId}".toURL())
         if (location) {
-            def geo = location?.entities?."${entity.entityId}"?.claims?.find {
-                it.value[0].mainsnak.datatype == "globe-coordinate" && it.value[0].mainsnak.datavalue.value.latitude != null
-            }
+            def geo = location?.entities?."${entity.entityId}"?.claims?.P625
             if (geo) {
-                geo = geo.value[0].mainsnak.datavalue.value
+                geo = geo[0].mainsnak.datavalue.value
                 doc.locations << [lat: geo.latitude, lon: geo.longitude]
                 doc.entityResolvedLocations << entity.normalized
                 doc.locationObjects << [name: entity.normalized, geo: [lat: geo.latitude, lon: geo.longitude]]

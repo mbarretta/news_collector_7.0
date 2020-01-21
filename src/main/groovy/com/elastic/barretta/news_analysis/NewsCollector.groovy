@@ -20,7 +20,7 @@ class NewsCollector {
 
         log.debug("running with config: [$config]")
         def client = new ESClient(config.es as ESClient.Config)
-
+        assert client.test()
         client.config.index = config.indices.news
         def results = [:]
         if (config.newsApi.key) {
