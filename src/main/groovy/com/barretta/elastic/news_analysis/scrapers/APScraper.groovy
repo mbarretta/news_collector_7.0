@@ -1,9 +1,9 @@
-package com.elastic.barretta.news_analysis.scrapers
+package com.barretta.elastic.news_analysis.scrapers
 
-import com.elastic.barretta.clients.ESClient
-import com.elastic.barretta.news_analysis.Enricher
-import com.elastic.barretta.news_analysis.PropertyManager
-import com.elastic.barretta.news_analysis.Utils
+import com.barretta.elastic.clients.ESClient
+import com.barretta.elastic.news_analysis.Enricher
+import com.barretta.elastic.news_analysis.PropertyManager
+import com.barretta.elastic.news_analysis.Utils
 import groovy.json.JsonSlurper
 import groovy.time.TimeCategory
 import groovy.util.logging.Slf4j

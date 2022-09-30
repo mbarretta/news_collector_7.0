@@ -1,6 +1,6 @@
-package com.elastic.barretta.news_analysis
+package com.barretta.elastic.news_analysis
 
-import com.elastic.barretta.clients.ESClient
+import com.barretta.elastic.clients.ESClient
 import groovy.util.logging.Slf4j
 
 import java.time.LocalDate

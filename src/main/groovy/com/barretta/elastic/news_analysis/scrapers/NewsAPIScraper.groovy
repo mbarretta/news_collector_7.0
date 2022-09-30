@@ -1,9 +1,9 @@
-package com.elastic.barretta.news_analysis.scrapers
+package com.barretta.elastic.news_analysis.scrapers
 
-import com.elastic.barretta.clients.ESClient
-import com.elastic.barretta.news_analysis.Enricher
-import com.elastic.barretta.news_analysis.PropertyManager
-import com.elastic.barretta.news_analysis.Utils
+import com.barretta.elastic.clients.ESClient
+import com.barretta.elastic.news_analysis.Enricher
+import com.barretta.elastic.news_analysis.PropertyManager
+import com.barretta.elastic.news_analysis.Utils
 import de.l3s.boilerpipe.extractors.ArticleExtractor
 import groovy.json.JsonSlurper
 import groovy.time.TimeCategory
@@ -64,7 +64,7 @@ class NewsAPIScraper {
                                 title : article.title,
                                 url   : article.url,
                                 byline: article.author,
-                                date  : article.publishedAt,
+                                date  : Utils.dealWithDates(article.publishedAt),
                                 source: source,
                                 text  : ArticleExtractor.INSTANCE.getText(new InputSource(article.url.toURL().openStream()))
                             ]

@@ -1,7 +1,6 @@
-package com.elastic.barretta.news_analysis
+package com.barretta.elastic.news_analysis
 
-import com.elastic.barretta.clients.ESClient
-import groovy.time.TimeCategory
+import com.barretta.elastic.clients.ESClient
 import groovy.util.logging.Slf4j
 
 @Slf4j
@@ -43,5 +42,9 @@ class Utils {
             annotatedText.append(text[last..-1])
         }
         return annotatedText.toString()
+    }
+
+    def dealWithDates(String date) {
+
     }
 }

@@ -1,7 +1,7 @@
-package com.elastic.barretta.news_analysis
+package com.barretta.elastic.news_analysis
 
 import com.elastic.barretta.analytics.rosette.RosetteApiClient
-import com.elastic.barretta.clients.ESClient
+import com.barretta.elastic.clients.ESClient
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsPool

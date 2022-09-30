@@ -1,8 +1,7 @@
-package com.elastic.barretta.news_analysis
+package com.barretta.elastic.news_analysis
 
-import com.elastic.barretta.clients.ESClient
-import com.elastic.barretta.news_analysis.scrapers.APScraper
-import com.elastic.barretta.news_analysis.scrapers.NewsAPIScraper
+
+import com.barretta.elastic.clients.ESClient
 import groovy.util.logging.Slf4j
 
 /**
@@ -24,9 +23,9 @@ class NewsCollector {
         client.config.index = config.indices.news
         def results = [:]
         if (config.newsApi.key) {
-            results += NewsAPIScraper.scrape(config.newsApi as NewsAPIScraper.Config, client)
+            results += com.barretta.elastic.news_analysis.scrapers.NewsAPIScraper.scrape(config.newsApi as com.barretta.elastic.news_analysis.scrapers.NewsAPIScraper.Config, client)
         }
-        results += APScraper.scrape(client)
+        results += com.barretta.elastic.news_analysis.scrapers.APScraper.scrape(client)
 
         return results
     }
