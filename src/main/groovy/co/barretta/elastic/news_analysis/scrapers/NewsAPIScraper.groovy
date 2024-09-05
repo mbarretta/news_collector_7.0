@@ -1,9 +1,8 @@
-package com.barretta.elastic.news_analysis.scrapers
+package co.barretta.elastic.news_analysis.scrapers
+
 
 import com.barretta.elastic.clients.ESClient
-import com.barretta.elastic.news_analysis.Enricher
-import com.barretta.elastic.news_analysis.PropertyManager
-import com.barretta.elastic.news_analysis.Utils
+import co.barretta.elastic.news_analysis.Utils
 import de.l3s.boilerpipe.extractors.ArticleExtractor
 import groovy.json.JsonSlurper
 import groovy.time.TimeCategory
@@ -42,10 +41,10 @@ class NewsAPIScraper {
             return [:]
         }
 
-        def enricher = new Enricher()
+        def enricher = new co.barretta.elastic.news_analysis.Enricher()
         def results = [:] as ConcurrentHashMap
 
-        GParsPool.withPool(PropertyManager.instance.properties.maxThreads as int) {
+        GParsPool.withPool(co.barretta.elastic.news_analysis.PropertyManager.instance.properties.maxThreads as int) {
             config.sources.each { source ->
                 log.info("fetching source [$source]")
 

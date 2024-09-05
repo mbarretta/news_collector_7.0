@@ -1,4 +1,4 @@
-package com.barretta.elastic.news_analysis
+package co.barretta.elastic.news_analysis
 
 import com.barretta.elastic.clients.ESClient
 import groovy.util.logging.Slf4j

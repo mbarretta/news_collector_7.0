@@ -1,4 +1,4 @@
-package com.barretta.elastic.news_analysis
+package co.barretta.elastic.news_analysis
 
 @Singleton(strict = false)
 class PropertyManager {

@@ -1,5 +1,5 @@
-group 'com.elastic.barretta'
-version '3.0.3'
+group 'co.elastic.barretta'
+version '4'
 
 //gives us the shadowJar task to build an uberjar for AWS Lambda and docker stuff
 buildscript {
@@ -7,8 +7,8 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.0'
-        classpath 'com.bmuschko:gradle-docker-plugin:3.2.4'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:4.0.3'
+        classpath 'com.bmuschko:gradle-docker-plugin:6.7.0'
     }
 }
 repositories {
@@ -23,7 +23,7 @@ apply plugin: 'application'
 import com.bmuschko.gradle.docker.tasks.image.Dockerfile
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 
-mainClassName = project.hasProperty("mainClass") ? project.getProperty("mainClass") : 'com.elastic.barretta.news_analysis.Main'
+mainClassName = project.hasProperty("mainClass") ? project.getProperty("mainClass") : 'co.elastic.barretta.news_analysis.Main'
 
 task sourcesJar(type: Jar) {
     from sourceSets.main.allSource
@@ -53,8 +53,8 @@ task createDockerfile(type: Dockerfile) {
 task buildDockerImage(type: DockerBuildImage) {
     dependsOn createDockerfile
     dockerFile = createDockerfile.destFile
-    inputDir = createDockerfile.destFile.parentFile
-    tag = "news_collector:$project.version"
+    inputDir = file("$buildDir/docker/news_collector")
+    images.add("news_collector:$project.version")
 }
 
 tasks.withType(GroovyCompile) {
@@ -67,19 +67,18 @@ repositories {
 }
 
 dependencies {
-    compile(
-        'com.github.mbarretta:clients-rosette:cae3c0c',
-        'com.github.mbarretta:es-client:3283979',
-        'com.syncthemall:boilerpipe:1.2.2',
-        'commons-cli:commons-cli:1.2',
-        'co.elastic.logging:logback-ecs-encoder:0.1.3',
-        'org.elasticsearch.client:elasticsearch-rest-high-level-client:7.5.0',
-        'org.codehaus.groovy:groovy-all:2.5.6',
-        'org.codehaus.gpars:gpars:1.2.1',
-        'ch.qos.logback:logback-classic:1.2.3', 
-        'org.apache.logging.log4j:log4j-to-slf4j:2.11.2',
-    )
-    testCompile 'org.spockframework:spock-core:1.3-groovy-2.5'
+    implementation 'org.jsoup:jsoup:1.16.1'
+    implementation 'commons-cli:commons-cli:1.5.0'
+    implementation 'co.elastic.logging:logback-ecs-encoder:1.5.0'
+    implementation 'org.elasticsearch.client:elasticsearch-rest-client:8.10.0'
+    implementation 'org.apache.groovy:groovy-all:4.0.13'
+    implementation 'org.codehaus.gpars:gpars:1.2.1'
+    implementation 'ch.qos.logback:logback-classic:1.4.11'
+    implementation 'org.apache.logging.log4j:log4j-to-slf4j:2.20.0'
+
+    testImplementation ('org.spockframework:spock-core:2.3-groovy-4.0') {
+        exclude group: 'org.apache.groovy', module: 'groovy'
+    }
 }
 
 processResources {

@@ -1,9 +1,8 @@
-package com.barretta.elastic.news_analysis.scrapers
+package co.barretta.elastic.news_analysis.scrapers
+
 
 import com.barretta.elastic.clients.ESClient
-import com.barretta.elastic.news_analysis.Enricher
-import com.barretta.elastic.news_analysis.PropertyManager
-import com.barretta.elastic.news_analysis.Utils
+import co.barretta.elastic.news_analysis.Utils
 import groovy.json.JsonSlurper
 import groovy.time.TimeCategory
 import groovy.util.logging.Slf4j
@@ -22,7 +21,7 @@ class APScraper {
         def results = [:] as ConcurrentHashMap
         final def AP_URL = "https://afs-prod.appspot.com/api/v2/feed/tag?tags="
 
-        def enricher = new Enricher()
+        def enricher = new co.barretta.elastic.news_analysis.Enricher()
 
         //fetch most recent article "cards" from each section
         [
@@ -44,7 +43,7 @@ class APScraper {
 
                 //fetch article for each url found
                 def posted = 0
-                GParsPool.withPool(PropertyManager.instance.properties.maxThreads as int) {
+                GParsPool.withPool(co.barretta.elastic.news_analysis.PropertyManager.instance.properties.maxThreads as int) {
                     articleUrls.collectParallel { new JsonSlurper().parse(it.toURL()) }.eachParallel { article ->
                         log.trace("starting article [${article.shortId}]")
                         def timeStart = new Date()

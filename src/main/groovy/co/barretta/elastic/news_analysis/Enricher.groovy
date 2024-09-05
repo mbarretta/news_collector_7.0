@@ -1,4 +1,4 @@
-package com.barretta.elastic.news_analysis
+package co.barretta.elastic.news_analysis
 
 import com.elastic.barretta.analytics.rosette.RosetteApiClient
 import com.barretta.elastic.clients.ESClient
